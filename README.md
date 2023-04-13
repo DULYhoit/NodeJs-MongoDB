@@ -15,3 +15,5 @@
 1. npm install -g nodemon :서버재실행
 2. npm install body-parser : 요청 데이터(body) 해석을 도와줌
 3. npm install ejs : html 을 좀더 쉽게 조작할수 있는 엔진
+4. npm install method-override : HTML 에서 PUT/DELETE 요청을 할수있게해줌
+5. npm install passport passport-local express-session : 세션관련 라이브러리

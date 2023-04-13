@@ -2,10 +2,18 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-
+const methodOverride = require('method-override');
 const MongoClient = require('mongodb').MongoClient;
+const passport = require('passport');
+const LocalStrategy = require('passport-local');
+const session  = require('express-session');
 app.set('view engine', 'ejs');
+app.use(methodOverride('_method'));
+app.use(session({secret : '비밀코드', resave : true, saveUninitialized: false}));
+app.use(passport.initialize());
+app.use(passport.session()); 
 var db;
+
 
 MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.3dujlrj.mongodb.net/?retryWrites=true&w=majority', function(err,client) {
     if(err) return console.log(err);
@@ -42,10 +50,10 @@ app.get('/pet',function (req,res) {
     res.send(json)
 });
 app.get('/',function (req,res) {
-    res.sendFile(__dirname + '/index.html')
+    res.render('index.ejs')
 });
 app.get('/write',function (req,res) {
-    res.sendFile(__dirname + '/write.html')
+    res.render('write.ejs')
 });
 app.get('/list',function(req,res) {
     db.collection('post').find().toArray(function (err,result) {
@@ -55,7 +63,37 @@ app.get('/list',function(req,res) {
     });
     
 })
-
+app.get('/detail/:id', function (req,res) {
+    
+    db.collection('post').findOne({id:parseInt(req.params.id)},function (err,result) {
+        if(result != null){
+            res.render('detail.ejs',{data : result});
+        }else{
+            res.send("<script>alert('존재하지 않는 게시물');location.href='/'</script>");
+            
+        
+        }
+       
+        
+    })
+})
+app.get('/edit/:id',function (req,res) {
+    db.collection('post').findOne({id :parseInt(req.params.id)},function (err,result) {
+        res.render('edit.ejs',{data : result});
+        
+    })
+})
+app.get('/login',function (req,res) {
+    res.render('login.ejs');
+})
+app.put('/edit',function (req,res) {
+    //1. form에 담긴 제목데이터, 날짜데이터를 가지고
+    //db.colection 에다가 업데이트함
+    db.collection('post').updateOne({id : parseInt(req.body.id)},{$set: {title:req.body.title, date : req.body.date}},function (err,result) {
+        console.log('수정완료');
+        res.redirect('/detail/'+req.body.id);
+    })
+})
 //post요청
 app.post('/add',function (req,res) {
     let count = db.collection('counter').findOne({name : '총게시물'},function (err,result) {
@@ -75,7 +113,11 @@ app.post('/add',function (req,res) {
     res.redirect('/');
     
 })
-
+app.post('/login',passport.authenticate('local',{
+    failureRedirect : '/fail'
+}),function (req,res) {
+    res.redirect('/');
+})
 app.delete('/delete',function (req,res) {
     console.log('삭제진행중...');
    req.body.id = parseInt(req.body.id);
