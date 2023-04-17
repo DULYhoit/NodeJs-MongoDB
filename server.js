@@ -12,6 +12,8 @@ app.use(methodOverride('_method'));
 app.use(session({secret : '비밀코드', resave : true, saveUninitialized: false}));
 app.use(passport.initialize());
 app.use(passport.session()); 
+app.use('/shop',require('./routes/shop'));
+app.use('/board/sub',require('./routes/board'))
 var db;
 
 
@@ -58,7 +60,7 @@ app.get('/write',function (req,res) {
 app.get('/list',function(req,res) {
     db.collection('post').find().toArray(function (err,result) {
         console.log(result);
-        res.render('list.ejs',{posts : result});
+        res.render('list.ejs',{posts : result ,id : req.user.id});
        
     });
     
@@ -86,6 +88,38 @@ app.get('/edit/:id',function (req,res) {
 app.get('/login',function (req,res) {
     res.render('login.ejs');
 })
+
+app.get('/mypage',loginCheck,function (req,res) {
+    console.log(req.user);
+    res.render('mypage.ejs',{data : req.user});
+})
+function loginCheck(req,res,next) {
+    if(req.user){
+        next()
+    }else{
+        res.send('로그인 상태가 아닙니다.')
+    }
+}
+
+app.get('/serch',(req,res) => {
+    var custom = [
+        {
+            $search: {
+              index: 'titleSearch',
+              text: {
+                query: req.query.value,
+                path: 'title'  // 제목날짜 둘다 찾고 싶으면 ['제목', '날짜']
+              }
+            }
+          },
+          {$sort : {id : 1}}
+    ]
+    db.collection('post').aggregate(custom).toArray((err,result)=>{
+        console.log(result);
+        res.render('serch.ejs',{data : result})
+    });
+})
+
 app.put('/edit',function (req,res) {
     //1. form에 담긴 제목데이터, 날짜데이터를 가지고
     //db.colection 에다가 업데이트함
@@ -101,7 +135,8 @@ app.post('/add',function (req,res) {
         let add = {
             id : result.totalPost + 1,
             title : req.body.title,
-            date : req.body.date
+            date : req.body.date,
+            user : req.user.id,
         };
         db.collection('post').insertOne(add,function(err,result) {
             db.collection('counter').updateOne({name : '총게시물'},{ $inc : {totalPost:1} },function (err) {
@@ -116,13 +151,66 @@ app.post('/add',function (req,res) {
 app.post('/login',passport.authenticate('local',{
     failureRedirect : '/fail'
 }),function (req,res) {
+
     res.redirect('/');
 })
+app.post('/register',function (req,res) {
+    db.collection('user').findOne({id : req.body.id},function (err,result) {
+        if(result !=null){
+            res.send('이미존재하는 아이디');
+        }else{
+            db.collection('user').insertOne({id : req.body.id , pw : req.body.pw},function (err,result) {
+                console.log('insert= ' + result)
+                res.redirect('/')
+            })
+            console.log(result);
+        }
+    })
+})
+
+//회원의 아이디와 비번을 검증하는 코드
+passport.use(new LocalStrategy({
+    usernameField: 'id',
+    passwordField: 'pw',
+    session: true,
+    passReqToCallback: false,
+  }, function (sid, spw, done) {
+    //console.log(입력한아이디, 입력한비번);
+    //done()함수는 3개의 파라미터를 가짐 (서버에러,일치할때 결과를 돌려줘라, 에러 메세지)
+    //보안 수준이 제일낮음 암호화필요(해쉬필요) 
+    db.collection('user').findOne({ id: sid }, function (err, result) {
+        //입력한정보
+        console.log(sid, spw,);
+      if (err) return done(err)
+  
+      if (!result) return done(null, false, { message: '존재하지않는 아이디요' })
+      if (spw == result.pw) {
+        return done(null, result)
+      } else {
+        return done(null, false, { message: '비번틀렸어요' })
+      }
+    })
+  }));
+//세션 설정
+passport.serializeUser(function(user,done) {
+    done(null, user.id)
+})
+//세션의 모든정보를 담을수있는 코드
+passport.deserializeUser(function (id,done) {
+    db.collection('user').findOne({id : id},function (err,result) {
+        done(null,result)
+        
+    })
+})
+
 app.delete('/delete',function (req,res) {
     console.log('삭제진행중...');
    req.body.id = parseInt(req.body.id);
    console.log(req.body.id);
-    db.collection('post').deleteOne(req.body,function (err,result) {
+    var target = {id : req.body.id, user : req.user.id }
+
+    db.collection('post').deleteOne(target,function (err,result) {
+        if(err) return err;
         console.log('삭제완료');
         res.status(200).send({message: '성공했습니다.'});
     })

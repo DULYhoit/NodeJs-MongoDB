@@ -22,9 +22,7 @@
     <!-- navbar -->
     <%- include('nav.ejs')%>
     <h1>리스트</h1>
-    <div hidden id="login-user"><%=id%></div>
-      
-    
+   
       <div class="container input-group mb-2">
         <input id="text" class="form-control" name="title">
         <button id="serch" class="input-group-append btn btn-danger">검색</button>
@@ -43,13 +41,13 @@
           </tr>
         </thead>
         <tbody>
-        <% for (var i = 0 ; i < posts.length ; i++){ %>
+        <% for (var i = 0 ; i < data.length ; i++){ %>
           <tr>
-            <th scope="row"><%=posts[i].id%></th>
-            <td class="link" data-id="<%=posts[i].id%>"><%=posts[i].title%></td>
-            <td><%=posts[i].date%></td>
-            <td class="username"><%=posts[i].user%></td>
-            <td><button style="display: none;" type="button" class="btn btn-danger delete" data-id = <%=posts[i].id%>>삭제</button></td>
+            <th scope="row"><%=data[i].id%></th>
+            <td class="link" data-id="<%=data[i].id%>"><%=data[i].title%></td>
+            <td><%=data[i].date%></td>
+            <td><%=data[i].user%></td>
+            <td><button type="button" class="btn btn-danger delete" data-id = <%= data[i].id %>>삭제</button></td>
           </tr>
           
           <% }%>
@@ -59,9 +57,7 @@
         </tbody>
       </table>
       <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-     
       <script>
-        
        $('.delete').click(function(e) {
         console.log(e.target.dataset.id);
         let postnum = e.target.dataset.id;
@@ -73,27 +69,9 @@
             console.log('ajax성공');
            location.reload();
          }).fail(function (result) {
-           alert('본인 게시물이 아닙니다.')
+           console.log('ajax실패')
          })
         })
-        //새로고침할때마다 내게시물인가 확인
-        
-        //지금 접속하고있는 아이디를 가져오기
-        let user = $('#login-user').text();
-        console.log(user);
-        //현재 tr들을 가져온다
-        let td = $('.username');
-        let btn = $('.delete');
-        console.log(td);
-        console.log(btn);
-        //반복문으로 user 값 td 값이 같은지 확인
-        for (let i = 0; i < td.length; i++) {
-          if(td.eq(i).text() == user){
-            btn.eq(i).css('display','block')
-          }
-          
-        }
-        
         
         $('.link').click(function(e) {
           console.log(e.target.dataset.id);
@@ -101,7 +79,11 @@
         })
       
       </script>
-     
+      <script
+      src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+      integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+      crossorigin="anonymous"
+    ></script>
     <script>
       $('#serch').click(function() {
         let text = $('#text').val();
